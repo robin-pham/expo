@@ -33,6 +33,7 @@ val cameraEvents = arrayOf(
   "onCameraReady",
   "onMountError",
   "onBarcodeScanned",
+  "onBarcodesScanned",
   "onFacesDetected",
   "onFaceDetectionError",
   "onPictureSaved"
