@@ -220,7 +220,10 @@ export default class CameraView extends React.Component {
         const onBarcodeScanned = this.props.onBarcodeScanned
             ? this._onObjectDetected(this.props.onBarcodeScanned)
             : undefined;
-        return (<ExpoCamera {...nativeProps} ref={this._cameraRef} onCameraReady={this._onCameraReady} onMountError={this._onMountError} onBarcodeScanned={onBarcodeScanned} onPictureSaved={_onPictureSaved} onResponsiveOrientationChanged={this._onResponsiveOrientationChanged}/>);
+        const onBarcodesScanned = this.props.onBarcodesScanned
+            ? this._onObjectDetected(this.props.onBarcodesScanned)
+            : undefined;
+        return (<ExpoCamera {...nativeProps} ref={this._cameraRef} onCameraReady={this._onCameraReady} onMountError={this._onMountError} onBarcodeScanned={onBarcodeScanned} onBarcodesScanned={onBarcodesScanned} onPictureSaved={_onPictureSaved} onResponsiveOrientationChanged={this._onResponsiveOrientationChanged}/>);
     }
 }
 //# sourceMappingURL=CameraView.js.map

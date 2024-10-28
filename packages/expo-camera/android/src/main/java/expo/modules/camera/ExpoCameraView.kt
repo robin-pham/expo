@@ -200,6 +200,12 @@ class ExpoCameraView(
      */
     coalescingKey = { event -> (event.data.hashCode() % Short.MAX_VALUE).toShort() }
   )
+  private val onBarcodesScanned by EventDispatcher<List<BarcodeScannedEvent>>(
+    coalescingKey = { eventList -> 
+      eventList.hashCode().toShort() 
+    }
+  )
+
 
   private val onPictureSaved by EventDispatcher<PictureSavedEvent>(
     coalescingKey = { event ->
@@ -422,12 +428,52 @@ class ExpoCameraView(
         if (shouldScanBarcodes) {
           analyzer.setAnalyzer(
             ContextCompat.getMainExecutor(context),
-            BarcodeAnalyzer(lensFacing, barcodeFormats) {
-              onBarcodeScanned(it)
+            BarcodeAnalyzer(lensFacing, barcodeFormats) { barcodes ->
+              // Fire both single and multiple barcode callbacks
+              handleSingleBarcode(barcodes.firstOrNull())
+              handleMultipleBarcodes(barcodes)
             }
           )
         }
       }
+
+  private fun handleSingleBarcode(barcode: BarCodeScannerResult?) {
+    barcode?.let {
+      transformBarcodeScannerResultToViewCoordinates(it)
+      val (cornerPoints, boundingBox) = getCornerPointsAndBoundingBox(it.cornerPoints, it.boundingBox)
+
+      onBarcodeScanned(
+        BarcodeScannedEvent(
+          target = id,
+          data = it.value,
+          raw = it.raw,
+          type = BarcodeType.mapFormatToString(it.type),
+          cornerPoints = cornerPoints,
+          bounds = boundingBox
+        )
+      )
+    }
+  }
+
+  private fun handleMultipleBarcodes(barcodes: List<BarCodeScannerResult>) {
+    if (barcodes.isNotEmpty()) {
+      val events = barcodes.map { barcode ->
+        transformBarcodeScannerResultToViewCoordinates(barcode)
+        val (cornerPoints, boundingBox) = getCornerPointsAndBoundingBox(barcode.cornerPoints, barcode.boundingBox)
+
+        BarcodeScannedEvent(
+          target = id,
+          data = barcode.value,
+          raw = barcode.raw,
+          type = BarcodeType.mapFormatToString(barcode.type),
+          cornerPoints = cornerPoints,
+          bounds = boundingBox
+        )
+      }
+
+      onBarcodesScanned(events)
+    }
+  }
 
   private fun buildResolutionSelector(): ResolutionSelector {
     val strategy = if (pictureSize.isNotEmpty()) {
@@ -541,26 +587,36 @@ class ExpoCameraView(
 
   private fun transformBarcodeScannerResultToViewCoordinates(barcode: BarCodeScannerResult) {
     val cornerPoints = barcode.cornerPoints
-    val previewWidth = previewView.width
-    val previewHeight = previewView.height
 
+    // For some reason they're swapped, I don't know anymore...
+    val cameraWidth = barcode.referenceImageHeight
+    val cameraHeight = barcode.referenceImageWidth
+
+    val facingBack = lensFacing == CameraType.BACK
     val facingFront = lensFacing == CameraType.FRONT
     val portrait = getDeviceOrientation() % 2 == 0
-    val landscape = getDeviceOrientation() % 2 != 0
+    val landscape = getDeviceOrientation() % 2 == 1
 
-    if (facingFront && portrait) {
-      cornerPoints.mapY { barcode.referenceImageHeight - cornerPoints[it] }
+    if (facingBack && portrait) {
+      cornerPoints.mapX { cameraWidth - cornerPoints[it] }
     }
-    if (facingFront && landscape) {
-      cornerPoints.mapX { barcode.referenceImageWidth - cornerPoints[it] }
+    if (facingBack && landscape) {
+      cornerPoints.mapY { cameraHeight - cornerPoints[it] }
     }
+    if (facingFront) {
+      cornerPoints.mapX { cameraWidth - cornerPoints[it] }
+      cornerPoints.mapY { cameraHeight - cornerPoints[it] }
+    }
+
+    val scaleX = width / cameraWidth.toDouble()
+    val scaleY = height / cameraHeight.toDouble()
 
     cornerPoints.mapX {
-      (cornerPoints[it] * previewWidth / barcode.referenceImageWidth.toFloat())
+      (cornerPoints[it] * scaleX)
         .roundToInt()
     }
     cornerPoints.mapY {
-      (cornerPoints[it] * previewHeight / barcode.referenceImageHeight.toFloat())
+      (cornerPoints[it] * scaleY)
         .roundToInt()
     }
 
@@ -599,23 +655,6 @@ class ExpoCameraView(
       )
     }
     return convertedCornerPoints to boundingBoxBundle
-  }
-
-  private fun onBarcodeScanned(barcode: BarCodeScannerResult) {
-    if (shouldScanBarcodes) {
-      transformBarcodeScannerResultToViewCoordinates(barcode)
-      val (cornerPoints, boundingBox) = getCornerPointsAndBoundingBox(barcode.cornerPoints, barcode.boundingBox)
-      onBarcodeScanned(
-        BarcodeScannedEvent(
-          target = id,
-          data = barcode.value,
-          raw = barcode.raw,
-          type = BarcodeType.mapFormatToString(barcode.type),
-          cornerPoints = cornerPoints,
-          boundingBox = boundingBox
-        )
-      )
-    }
   }
 
   override fun setPreviewTexture(surfaceTexture: SurfaceTexture?) = Unit

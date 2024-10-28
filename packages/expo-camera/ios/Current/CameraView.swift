@@ -124,6 +124,7 @@ public class CameraView: ExpoView, EXCameraInterface, EXAppLifecycleListener,
   let onMountError = EventDispatcher()
   let onPictureSaved = EventDispatcher()
   let onBarcodeScanned = EventDispatcher()
+  let onBarcodesScanned = EventDispatcher()
   let onResponsiveOrientationChanged = EventDispatcher()
 
   private var deviceOrientation: UIInterfaceOrientation {
@@ -837,7 +838,14 @@ public class CameraView: ExpoView, EXCameraInterface, EXAppLifecycleListener,
         self.onBarcodeScanned(body)
       }
     }
-
+    scanner.onBarcodesScanned = { [weak self] body in
+      guard let self else {
+        return
+      }
+      if let body {
+        self.onBarcodesScanned(body)
+      }
+    }
     return scanner
   }
 

@@ -416,7 +416,16 @@ export type CameraProps = ViewProps & {
    */
   onBarcodeScanned?: (scanningResult: BarcodeScanningResult) => void;
   /**
-   * Callback invoked when responsive orientation changes. Only applicable if `responsiveOrientationWhenOrientationLocked` is `true`
+   * Callback that is invoked when barcodes have been successfully scanned. The callback is provided with
+   * an object of the [`BarcodeScanningResult`](#barcodescanningresult) shape, where the `type`
+   * refers to the barcode type that was scanned, and the `data` is the information encoded in the barcode
+   * (in this case of QR codes, this is often a URL). See [`BarcodeType`](#barcodetype) for supported values.
+   * @param scanningResults
+   */
+  onBarcodesScanned?: (scanningResults: BarcodeScanningResult[]) => void;
+
+  /**
+   * Callback invoked when responsive orientation changes. Only applicable if `responsiveOrientationWhenOrientationLocked` is `true`.
    * @param event result object that contains updated orientation of camera
    * @platform ios
    */
@@ -446,6 +455,7 @@ export type CameraNativeProps = {
   onCameraReady?: CameraReadyListener;
   onMountError?: MountErrorListener;
   onBarcodeScanned?: (event: { nativeEvent: BarcodeScanningResult }) => void;
+  onBarcodesScanned?: (event: { nativeEvent: BarcodeScanningResult[] }) => void;
   onPictureSaved?: PictureSavedListener;
   onResponsiveOrientationChanged?: ResponsiveOrientationChangedListener;
   facing?: string;
